@@ -1,8 +1,12 @@
 import time
 
 
+import time
+
+
 # fibonacci function
 def fib(n):
+
 	if n == 0 or n == 1:
 		return 1
 	else:
@@ -18,9 +22,7 @@ elapsed = end - start
 print(elapsed)
 
 
-# build a cache memory with a doubly-linked list
-
-# Linked-list node constructor 
+# Node class (constructor) 
 class Node:
 	def __init__(self, key):
 		self.key = key
@@ -28,76 +30,119 @@ class Node:
 		self.next = None
 		self.prev = None
 
+# LinkedList class (constructor)
 class LinkedList:
 	def __init__(self):
 		self.head = None
-		self.tail = None
+
+# Dict backup for fast lookup for cache
+class Map:
+	def __init__(self):
+		self.dict = dict()
+
+	def add(self, key, val):
+		self.dict[key] = val
+
+	def get(self, key):
+		return self.dict[key]
 
 
-# print(llist.head) # memory space of Node(4)
-# print(llist.head.data) # fibonacci value of 5
+# Build a doubly linked-list!
 llist = LinkedList()
+backup = Map()
 
-llist.head = Node(1) # {'key': 1, 'data': 1, 'next': None, 'prev': None}
-current = llist.head
-last = llist.tail
+# Function adds new node to a linked list
+def addLink(key):
 
-# llist.head.next = Node(2)
+	# If list doesn't exit
+	if llist.head == None:
+		# Set head to Node class (becomes first node)
+		llist.head = Node(key)
+		# Point tail to head, as head pointer value becomes tail after a second node is added
+		llist.tail = llist.head
+		return llist
+	else:
+		# Create new node
+		new = Node(key) 
+		# Point new node 'next' to llist.head
+		new.next = llist.head
 
+		# Set tail 'prev' if not set
+		if not llist.tail.prev:
+			llist.tail.prev = new
 
-current.next = Node(2) #(llist.head.next = Node(2))
+		# Point head of list 'prev' to new node
+		llist.head.prev = new 
+		# Reset llist.head to point to the new node
+		llist.head = new
 
-print(current.next) # <__main__.Node object at 0x1093f23c8>
+		# Back it for fast lookup(map to dict)
+		backup.add(key, Node(key).data)
 
-previous = current
-current = current.next #(current is Node 2)
+		return llist
 
-# llist.head is now {'key': 1, 'data': 1, 'next': Node object at 0x1093f23c8, 'prev': None }
-# llist.head.next is {'key': 2, 'data': 2, 'next': none, 'prev': None }
-print(current.data) # 2 print(llist.head.next.data)
+# function removes last node
+def delLink():
+	# Set the second to last node by referencing the linked-list tail's previous
+	secondToLast = llist.tail.prev
+	# Delete that node
+	del secondToLast.next
+	# Put the secondToLast.next to point to None
+	secondToLast.next = None
+	# Reset the tail value 
+	llist.tail = secondToLast
+	return llist
 
-current.prev = previous # (1) llist.head.next.prev = llist.head
-# list.head.next is now {'key': 2, 'data': 2, 'next': None, 'prev': Node object at 0x10932dbe0 }
+		
 
-print(llist.head.next.prev ) # Node(1) <__main__.Node object at 0x10932dbe0>
+# Read llist, if there is match move the key to the front of the list
+def readCache(key):
+	current = llist.head
+	# Loop through doubly linked-list beginning with llink.head
+	while current:
+		# If the current.key matches the key
+		if current.key == key:
+			
+			# If the key is not the first node
+			if current.prev:
+				# If the key is not the last node (Node removes itself)
+				if current.next:
+					
+					# Point the previous node's next to current node's next value
+					current.prev.next = current.next
+					# Point the next node's prev to the current nodes' nev
+					current.next.prev = current.prev
 
+				# If the key is the last node, set the second last node's next to none
+				else:
+					current.prev.next = None
+				
+				# Move current Node to head of list
+				current.next = llist.head
+				# Point current head previous to current
+				llist.head.prev = current
+				# Reset llist.head to point to key
+				llist.head = current
+			# If the key matches	
+			return llist
 
-current.next = Node(3) #  llist.head.next.next = Node(3) which is {'key': 3, 'data': 3, 'next': None, 'prev': None}
-
-print(llist.head.next.next.key, llist.head.next.next.data, llist.head.next.next.next, llist.head.next.next.prev, ) # 3 3 None None
-
-previous = current
-current = current.next #(current is Node 3)
-current.prev = previous # llist.head.next.next.prev = llist.head.next {'key': 3, 'data': 3, 'next': None, 'prev': Node object at 0x1093f23c8}
-
-
-print(current.prev ) #  Node(2) <__main__.Node object at 0x10932dbe0>
-
-node = llist.head
-
-while node.next:
-	print(node.data)
-	node = node.next
-else:
-	print(node.data)
-
-
-
-
-
-
-
-
-# def chain(input):
+		current = current.next
 	
-# 	# if  not first time through
-# 	if llist.head:
+	return "cache miss"
 
+addLink(1)
+addLink(2)
+addLink(3)
 
-# 	# First time through (empty list)
-# 	else:
-# 		llist.head = Node(input)
-# 		print('first time through')
-# 		llist.tail = llist.head 
+print(llist.tail.data) # 1
+delLink()
+print(llist.tail.data) # 2
+addLink(4)
 
+print(backup.dict)
+print(llist.head.key) # 4
 
+print(readCache(10)) # Cache miss
+print(readCache(2).head.key) # 2
+
+print(llist.head.data) # 2!
