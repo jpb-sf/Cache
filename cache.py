@@ -3,14 +3,10 @@ import sys
 import csv
 import shutil
 
-# conn = sqlite3.connect('cache.db')
-# print("opened db successfully")
-# cursor = conn.cursor()
-
 
 # Mock Cache LRU program is using a doubly linked-list to cache for fast insertion/deletion
-# Then it uses a backup dictionary that maps values for fast lookup.
-# Lookup will also require sort afterwards, and sort and lookup are slow in a linked-list. 
+# Then it uses a dictionary to 'hash map'values for fast lookup.
+# Lookup will also require sorting afterwards, and sort and lookup are slow in a linked-list. 
 # Best of both worlds using doubly-linked list, and backing it up with hash map
 
 
@@ -53,39 +49,14 @@ class Map:
 	def __init__(self):
 		self.dict = dict()
 
-	def add(self, key, val):
-		self.dict[key] = val
-
-	def get(self, key):
-		return self.dict[key]
 
 
-# Function adds new value as a new node to a linked list; a key/value pair in the hash map and the csv file
-def backUp(key, val):
+# No function to add to Hash Table: 
+#backup.update({key: val})
 
-	fieldnames = ['key', 'val']
-	try:
-		with open('fib.csv', 'a+', newline="") as fibCsv:
-			csvWriter = csv.DictWriter(fibCsv, fieldnames=fieldnames)
-			# Search to see if file is empty
-			fibCsv.seek(0,2)
-			# If file is empty
-			if fibCsv.tell() == 0:
-				fibCsv.seek(0)
-				csvWriter.writeheader()
-			csvWriter.writerow({'key': key, 'val': val})
-	except Exception as e:
-		print(e)
-
-def addHash(key):
-	val = int(fib(key))
-	
-	# Back it for fast lookup(map to dict)
-	backup.dict.update({key: val})
-	backUp(int(key), val)
-
-# Function has double usage, first it adds the new nodes to linked-list from user entries when program is open, 
-# and also is utilized in loadCache function to rebuild the linked-list during a new session
+# This function has double usage. First it adds the new nodes to linked-list from user entries. 
+# Second, it also is utilized in loadCache function to rebuild the linked-list during a new session or 
+# (program is closed and reopened)
 def addLink(key):
 
 	if llist.head == None:
@@ -108,77 +79,9 @@ def addLink(key):
 		# Reset llist.head to point to the new node
 		llist.head = new
 
+# Function swaps link nodes in linked-list IF it already exists
 
-# function removes last node
-def delLink():
-	# Set the second to last node by referencing the linked-list tail's previous
-	secondToLast = llist.tail.prev
-	
-	# delete from backup
-	del backup.dict[llist.tail.key]
-	
-	# Delete that node
-	del secondToLast.next
-
-	# Put the secondToLast.next to point to None
-	secondToLast.next = None
-	# Reset the tail value 
-	llist.tail = secondToLast
-
-	return llist
-
-
-# Load the cache into both the hash map, and the doubly-linked list from the db (fib.csv)
-def loadCache():
-	try:
-		with open('fib.csv', 'r') as fibCsv:
-			csvReader = csv.DictReader(fibCsv)
-			fibCsv.seek(0, 2)
-			# If db is empty, there is nothing to load, function stops.
-			if fibCsv.tell() == 0:
-				pass
-			# Else if the csv is not empty, load it
-			else:
-				fibCsv.seek(0)
-				print('csv is not empty')
-				for line in csvReader:
-					# Load hashmap
-					backup.dict.update({int(line['key']): int(line['val'])})
-					# Load doubly linked-list
-					addLink(int(line['key']))
-		
-		print('check1')		
-		print(backup.dict)
-		print('check2')		
-	
-	except Exception as e:
-		print(e)
-	
-# function is called from readCache, 'reads'/ returns value from hashmap dict, if exists in cache
-def returnCache(key):
-	
-	if key in backup.dict:
-		print('Position ' + str(key) + ' is: ' + str(backup.dict[key]))
-		return backup.dict[key]
-	else:
-		print("cache miss backup")
-		# Kick the value back to the user before the program adds the new value to the cache
-		print('Position ' + str(key) + ' is: ' + str(fib(key)))
-		return fib(key)
-
-# Function returns cache value to user from hashmap backup, then checks to see if key exists in liknked-list; 
-# if it exists, updates doubly-linked list by moving node to front.
-# If Node key does not exist in the linked-list, calls addLink function in order to add Node 
-def readCache(key):
-
-	# return value to user from the map backup cache if value exists, if not cached, calculate and return to user.
-	# Then continue adding new value to the program's cache data structures, and then the csv
-	returnCache(key)
-
-	# If the backup hashmap is full and value is not already cached, delete last node in linked-list, and key/value in backup
-	if len(backup.dict) >= 5 and not key in backup.dict:
-		print('delete')
-		delLink()
+def linkSwap(key):
 
 	current = llist.head
 	# If list isn't empty, Loop through doubly linked-list checking to see if key already exists
@@ -199,6 +102,8 @@ def readCache(key):
 				# If the key is the last node, set the second last node's next to none
 				else:
 					current.prev.next = None
+					# Set linked list tail to the traversing 'current' value's prev
+					llist.tail = current.prev
 				
 				# Move new Node's next to head of list
 				current.next = llist.head
@@ -207,40 +112,218 @@ def readCache(key):
 				# Reset llist.head to point to new Node 'current'
 				llist.head = current
 
-				return "updated"
-			else:
-				return "Node at front"
+			# Node value exists, swap in order of the linked-list nodes was made
+			return True
 
+		# updates value to be able to loop thru
 		current = current.next
-	addLink(key)
-	addHash(key)
-	return "cache miss linked-list"
+	# Node value does not already exist
+	return False
 
 
-def delCache():
+# Function removes least-recently-used node from linked-list, and least-recently-used key/value pair from hash map
+# It returns the key of llist.tail
+def delLRU():
+	# Set the second to last node by referencing the linked-list tail's previous
+	deleteKeyValue = llist.tail.key
+	
+	# delete from hashmap backup
+	del backup[deleteKeyValue]
+	
+	# Put the secondToLast.next to point to None
+	llist.tail.prev.next = None
+	# Reset the tail value 
+	llist.tail = llist.tail.prev
+
+	print('del LRU')
+
+	return deleteKeyValue
+
+
+# Load the program cache into both the hash map, and the doubly-linked list from the cache (fib.csv)
+def loadCache():
+	fieldnames = ['key', 'val']
+	try:
+		with open('fib.csv', 'r+') as fibCsv:
+			csvReader = csv.DictReader(fibCsv)
+			fibCsv.seek(0, 2)
+			# If cache is empty, there is nothing to load, function stops.
+			if fibCsv.tell() == 0:
+				pass
+			# Else if the csv is not empty, load it
+			else:
+				fibCsv.seek(0)
+				print('csv is not empty')
+				for line in csvReader:
+					# Load hashmap
+					backup.update({int(line['key']): int(line['val'])})
+					# Load doubly linked-list
+					addLink(int(line['key']))
+
+				print('Load cache')
+				print(llist.head.key)		
+				print(llist.tail.key)		
+				print('backup is ' str(backup))
+					
+	except Exception as e:
+		print(e)
+	
+
+# Function adds new value as a new node to a linked list; a key/value pair in the hash map and the csv file
+def updateCache(key, val):
+
+	fieldnames = ['key', 'val']
+	
+	try:
+		with open('fib.csv', 'a+', newline="") as fibW:
+			# csvReader = csv.DictReader(fibR)
+			csvWriter = csv.DictWriter(fibW, fieldnames=fieldnames)
+			# Search to see if file is empty
+			fibW.seek(0,2)
+			# If file is empty
+			if fibW.tell() == 0:
+				fibW.seek(0)
+				csvWriter.writeheader()
+			csvWriter.writerow({'key': key, 'val': val})
+	except Exception as e:
+		print(e)
+
+def removeCache(deleteKeyValue):
+
+	fieldnames = ['key', 'val']
+	
+	try:
+		with open('fib.csv', 'r') as fibR, open('fib.csv', 'a+', newline="") as fibW, \
+		open('temp.csv', 'a+', newline="") as tempW:
+			csvReader = csv.DictReader(fibR, fieldnames=fieldnames)
+			csvWriter = csv.DictWriter(fibW, fieldnames=fieldnames)
+			tempWriter = csv.DictWriter(tempW, fieldnames=fieldnames)
+			print('csv is full')
+			print('deleteKeyValue is ' + str(deleteKeyValue))
+			# Reset csv cursor to delete tag
+			# fibCsv.seek(0)
+			# For ever line in csv if the key is NOT matching, write the line
+			for line in csvReader:
+				print('for line in csvReader')
+				if not line['key'] == str(deleteKeyValue):
+					tempWriter.writerow(line) 
+				else:
+				 	print("it's the key") # write all non-matching lines
+			# shutil.move('content of source','to destination')
+			shutil.move('temp.csv','fib.csv')
+	except Exception as e:
+		print(e)
+		
+def clearCache():
 	try:
 		# WOW big learn. To clear a whole csv, make a new file, and save it over the old one
 		with open('fib.csv', 'r') as csvOld, open('new.csv', 'w', newline='') as csvNew:
 			csvReader = csv.DictReader(csvOld)
 			csvOld.seek(0, 2)
-			# If db is empty, there is nothing to load, function stops.
+			# If cache is empty, there is nothing to delete and copy over, function stops.
 			if not csvOld.tell() == 0:
 				# shutil.move('content of source','to destination')
 				shutil.move('new.csv','fib.csv')
-				llist = LinkedList()
-				backup = Map()
+				backup.clear()
+
+				# Delete nodes in linked list
+				trav = llist.head.next
+				# While trav is not None
+				while not trav:
+					# Delete previous node
+					del trav.prev
+					# Traverse to next node
+					trav = trav.next
+				# Delete the last node
+				del trav
+				# Reset head tail values
+				llist.head = None
+				llist.tail = None
+			
 			else:
 				print('Cache is alread empty')
-				
+
 	except Exception as e:
 		print(e)
 
+	
+# function is called from readCache, 'reads'/ returns value from hashmap dict, if exists in cache
+def returnCache(state, key, val = False):
+	
+	if state:
+		return backup[key]
+	else:
+		return val
+
+	
+# cacheManager function returns cache value to user from hashmap backup, IF it exists.
+# If it doesn't exist, it calculates value, returns, and saves it to program data structures,
+# and the cache (csv file)
+
+
+def cacheManager(key):
+	deleteKeyValue = False
+	# Check if key is in the program's uploaded cache hash table 'backup' which is make for quick lookup
+	if key in backup:
+		print('Return to user: Position ' + str(key) + ' is: ' + str(backup[key]))
+		
+		# Call returnCache function which sends value to user
+		returnCache(True, key)
+
+	val = fib(key)
+	# If the key is not uploaded into program cache hashmap
+	if key not in backup:
+		print("cache miss backup")
+		
+		# Kick the value back to the user before the program adds the new value to the cache
+		print('Return to user: Position ' + str(key) + ' is: ' + str(val))
+		
+		# Call returnCache function which sends value to user
+		returnCache(False, key, val)
+
+	# Then continue adding new value to the program's cache data structures, and csv.
+	
+	# capacity of cache is not full (False) until we check 
+	capacity = False
+	# If the backup hashmap is full and value is not already cached, delete last node in linked-list, and the key/value in backup
+	if len(backup) >= 5 and not key in backup:
+		# Cache capacity is Full (True)
+		capacity = True
+		print('Cache is full')
+		
+		# Delete value from program's memory (backup and linked-list)
+		deleteKeyValue = delLRU()
+		
+		# Remove LRU value from cache
+		removeCache(deleteKeyValue)
+
+	# Finally, if key value does not exist in program memory already, add the new key value pair
+	# to the linked-list (addLink()), and hash-table (backup), and then to the cache (updateCache())
+	if not linkSwap(key):
+		addLink(key)
+		backup.update({key: val})
+		updateCache(key, val) 
+	print('new llist.head.key is ' + str(llist.head.key))
+	print('new llist.tail.key is ' + str(llist.tail.key))
+	print(backup)
+	
+#================================================================
+
+# Switch representing first time entry is submitted by user after program is opened
 first = True
 
-# Greet users with menu options that can inputed
-print(f'(For menu options, enter "m") \n\nHi User,')
+# Switch for open/close value of program
 program = True
-while(program):
+while program:
+
+	# If program just opened, initiate data structures
+	if first:
+		global llist
+		llist = LinkedList()
+		global backup 
+		backup = {}
+		# Greet users with menu options that can inputed
+		print(f'(For menu options, enter "m") \n\nHi User,')
 
 	# Prompt user for a number
 	print(f'what Fibonacci value would you like? \nEnter position number: ')
@@ -257,12 +340,25 @@ while(program):
 		
 		if entry == "m" or entry == "M":
 			print(f'Menu: \n Enter "n" to close program. \n Enter "s" to see status of cache values. \n' +
-			' Enter "d" to delete all cache \n' )
+			' Enter "c" to clear all cache \n' )
 		
-		elif entry == "d" or entry == "D":
+		elif entry == "c" or entry == "C":
 			print("Are you sure you want to delete your cache? ('y' or 'n')")
-			delCache()
-		
+			clear = False
+			while not clear:
+				confirm = input()
+				if confirm == 'y' or confirm == 'Y':
+					clearCache()
+					print('Cache cleared')
+					clear = True
+
+				elif confirm == 'n' or confirm == 'N':
+					print('Cache is NOT cleared')
+					clear = True
+				
+				elif not confirm == 'n' or not confirm =='N':
+					print('To clear cache please confirm with a "y" for yes, or "n" to NOT clear cache')
+			
 		else:
 			# Try to set value to an int
 			try:
@@ -275,64 +371,15 @@ while(program):
 			# value is not an int, get node	
 			if isinstance(entry, int):
 				
-				# If first user input after program is opened, set data structures
+				# If input is the very first input submitted after program is opened,
 				if first == True:
-					global llist
-					llist = LinkedList()
-					global backup 
-					backup = Map()
+					print("let's load cache")
 					first = False
-					print('no problems here')
 					# Load the cache values from csv into the program's linked-list, and hash map backup
 					loadCache()
 				
-				# If this is not the first user input
-				else:
-					print('not first input')
-				
-				readCache(entry)
-	
-
-
-
-
-
-
-
-# print(llist.head)
-# readCache(1) # cache miss backup, return '1', cache miss linked-list
-
-# readCache(2)
-# readCache(3)
-# print(llist.head.key) # 3
-# print(llist.tail.key) # 1
-# readCache(10)
-# readCache(4) #Length is still 4 until AFTER the function finishes, then it becomes 5. The next call will delete the sixth value
-# print('the tail is ' + str(llist.tail.key)) # 1
-# print(backup.dict) # {1: 1, 2: 2, 3: 3, 10: 89, 4: 5}
-# readCache(5) # 8, delete tail
-# print(llist.head.key) # 5
-# print(llist.tail.key) # 2
-# print(backup.dict) # {1: 1, 2: 2, 3: 3, 10: 89, 4: 5}
-# print('the tail is ' + str(llist.tail.key)) # 2
-# readCache(12) 
-# print(backup.dict) # {2: 2, 3: 3, 10: 89, 4: 5, 12: 233}
-
-# readCache(8) 
-# print(backup.dict) # {3: 3, 10: 89, 4: 5, 12: 233, 8: 34}
-
-
-# print(llist.head.key) # head is 8	
-# print(llist.head.next.key) # next is 12
-
-# print(llist.tail.key) # tail is 10
-# readCache(10)
-# print(llist.head.key) # head is 10
-# print(llist.head.next.key) # next is 8
-
-# print(llist.tail.key) # key is still 10!
-
-
+				# if entry is valid, read it
+				cacheManager(entry)
 
 
 
