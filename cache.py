@@ -22,12 +22,15 @@ def fib(n):
 		return fib(n - 1) + fib(n - 2)
 
 
-# testing time to run function
-start = time.time()
-# print([fib(x) for x in range(32)])
-#print(fib(89))
-end = time.time()
-elapsed = end - start
+
+# function displays time taken
+
+# def time():
+# 	start = time.time()
+
+# 	end = time.time()
+# 	elapsed = end - start
+# 	return elapsed
 
 
 # Node class (constructor) 
@@ -48,7 +51,6 @@ class LinkedList:
 class Map:
 	def __init__(self):
 		self.dict = dict()
-
 
 
 # No function to add to Hash Table: 
@@ -163,7 +165,7 @@ def loadCache():
 				print('Load cache')
 				print(llist.head.key)		
 				print(llist.tail.key)		
-				print('backup is ' str(backup))
+				print('backup is ' + str(backup))
 					
 	except Exception as e:
 		print(e)
@@ -233,15 +235,22 @@ def clearCache():
 					# Delete previous node
 					del trav.prev
 					# Traverse to next node
-					trav = trav.next
+					try:
+						trav = trav.next
+					except Exception as e:
+						pass
+
 				# Delete the last node
 				del trav
 				# Reset head tail values
 				llist.head = None
 				llist.tail = None
+				result = "Cache is cleared"
+				return result
 			
 			else:
-				print('Cache is alread empty')
+				result = "Cache is already cleared"
+				return result
 
 	except Exception as e:
 		print(e)
@@ -251,6 +260,7 @@ def clearCache():
 def returnCache(state, key, val = False):
 	
 	if state:
+
 		return backup[key]
 	else:
 		return val
@@ -262,13 +272,19 @@ def returnCache(state, key, val = False):
 
 
 def cacheManager(key):
+	
 	deleteKeyValue = False
 	# Check if key is in the program's uploaded cache hash table 'backup' which is make for quick lookup
 	if key in backup:
 		print('Return to user: Position ' + str(key) + ' is: ' + str(backup[key]))
 		
 		# Call returnCache function which sends value to user
+		
+		start = time.time()
 		returnCache(True, key)
+		end = time.time()
+		elapsed = round(end - start, 10)
+		print('Time taken for cached value: ' + str(elapsed))
 
 	val = fib(key)
 	# If the key is not uploaded into program cache hashmap
@@ -279,7 +295,12 @@ def cacheManager(key):
 		print('Return to user: Position ' + str(key) + ' is: ' + str(val))
 		
 		# Call returnCache function which sends value to user
+		start = time.time()
 		returnCache(False, key, val)
+		end = time.time()
+		elapsed = round(end - start, 10)
+		print('Time taken for uncached value: ' + str(elapsed))
+
 
 	# Then continue adding new value to the program's cache data structures, and csv.
 	
@@ -348,8 +369,7 @@ while program:
 			while not clear:
 				confirm = input()
 				if confirm == 'y' or confirm == 'Y':
-					clearCache()
-					print('Cache cleared')
+					print(clearCache())
 					clear = True
 
 				elif confirm == 'n' or confirm == 'N':
