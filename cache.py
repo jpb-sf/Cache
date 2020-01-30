@@ -226,22 +226,28 @@ def clearCache():
 			if not csvOld.tell() == 0:
 				# shutil.move('content of source','to destination')
 				shutil.move('new.csv','fib.csv')
+
+				# Empty hash-map
 				backup.clear()
 
 				# Delete nodes in linked list
-				trav = llist.head.next
-				# While trav is not None
-				while not trav:
-					# Delete previous node
-					del trav.prev
-					# Traverse to next node
-					try:
-						trav = trav.next
-					except Exception as e:
-						pass
+				# trav = llist.head.next
+				# # While trav is not None
+				# while not trav:
+					
+				# 	# Delete previous node
+				# 	if trav.prev:
+				# 		del trav.prev
+				# 	# If last node, delete
+				# 	else:
+				# 		del trav
+					
+				# 	# Traverse to next node
+				# 	try:
+				# 		trav = trav.next
+				# 	except Exception as e:
+				# 		pass
 
-				# Delete the last node
-				del trav
 				# Reset head tail values
 				llist.head = None
 				llist.tail = None
@@ -257,52 +263,47 @@ def clearCache():
 
 	
 # function is called from readCache, 'reads'/ returns value from hashmap dict, if exists in cache
-def returnCache(state, key, val = False):
+def returnCache(state, key):
 	
 	if state:
 
 		return backup[key]
 	else:
+		val = fib(key)
 		return val
 
 	
 # cacheManager function returns cache value to user from hashmap backup, IF it exists.
 # If it doesn't exist, it calculates value, returns, and saves it to program data structures,
 # and the cache (csv file)
-
-
 def cacheManager(key):
 	
 	deleteKeyValue = False
 	# Check if key is in the program's uploaded cache hash table 'backup' which is make for quick lookup
 	if key in backup:
-		print('Return to user: Position ' + str(key) + ' is: ' + str(backup[key]))
 		
 		# Call returnCache function which sends value to user
-		
 		start = time.time()
-		returnCache(True, key)
+		val = returnCache(True, key)
 		end = time.time()
-		elapsed = round(end - start, 10)
-		print('Time taken for cached value: ' + str(elapsed))
+		elapsed = "{:.8f}".format(end - start)
+		print('Return to user: Position ' + str(key) + ' is: ' + str(backup[key]))
+		print('Time taken for cached value: ' + elapsed)
 
-	val = fib(key)
 	# If the key is not uploaded into program cache hashmap
 	if key not in backup:
 		print("cache miss backup")
 		
 		# Kick the value back to the user before the program adds the new value to the cache
-		print('Return to user: Position ' + str(key) + ' is: ' + str(val))
-		
 		# Call returnCache function which sends value to user
 		start = time.time()
-		returnCache(False, key, val)
+		val = returnCache(False, key)
 		end = time.time()
-		elapsed = round(end - start, 10)
-		print('Time taken for uncached value: ' + str(elapsed))
+		elapsed = "{:.8f}".format(end - start)
+		print('Return to user: Position ' + str(key) + ' is: ' + str(val))
+		print('Time taken for uncached value: ' + elapsed)
 
-
-	# Then continue adding new value to the program's cache data structures, and csv.
+ 	 # Then continue adding new value to the program's cache data structures, and csv.
 	
 	# capacity of cache is not full (False) until we check 
 	capacity = False
