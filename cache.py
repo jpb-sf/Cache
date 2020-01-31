@@ -22,22 +22,14 @@ def fib(n):
 		return fib(n - 1) + fib(n - 2)
 
 
-
-# function displays time taken
-
-# def time():
-# 	start = time.time()
-
-# 	end = time.time()
-# 	elapsed = end - start
-# 	return elapsed
-
-
 # Node class (constructor) 
 class Node:
-	def __init__(self, key):
+	def __init__(self, key, val=False):
 		self.key = key
-		self.data = fib(key)
+		if val:
+			self.data = val
+		else:
+			self.data = fib(key)
 		self.next = None
 		self.prev = None
 
@@ -47,28 +39,23 @@ class LinkedList:
 		self.head = None
 		self.tail = None
 
-# Dict backup for fast lookup for cache
-class Map:
-	def __init__(self):
-		self.dict = dict()
-
 
 # No function to add to Hash Table: 
 #backup.update({key: val})
 
-# This function has double usage. First it adds the new nodes to linked-list from user entries. 
-# Second, it also is utilized in loadCache function to rebuild the linked-list during a new session or 
+# The addLink function has double usage. First it adds the new nodes to linked-list from user entries. 
+# Second, it  is utilized in loadCache function to rebuild the linked-list during a new session or 
 # (program is closed and reopened)
-def addLink(key):
-
+def addLink(key, val):
+	# If program cache is empty
 	if llist.head == None:
 		# Set head to Node class (becomes first node)
-		llist.head = Node(key)
+		llist.head = Node(key, val)
 		# Point tail to head, as head pointer value becomes tail after a second node is added
 		llist.tail = llist.head
 	else:
 		# Create new node
-		new = Node(key)
+		new = Node(key, val)
 		# Point new node 'next' to llist.head
 		new.next = llist.head
 
@@ -81,8 +68,7 @@ def addLink(key):
 		# Reset llist.head to point to the new node
 		llist.head = new
 
-# Function swaps link nodes in linked-list IF it already exists
-
+# Function swaps link nodes in linked-list IF key value already exists
 def linkSwap(key):
 
 	current = llist.head
@@ -149,18 +135,16 @@ def loadCache():
 		with open('fib.csv', 'r+') as fibCsv:
 			csvReader = csv.DictReader(fibCsv)
 			fibCsv.seek(0, 2)
-			# If cache is empty, there is nothing to load, function stops.
-			if fibCsv.tell() == 0:
-				pass
-			# Else if the csv is not empty, load it
-			else:
+			# If cache is not empty, load it
+			if not fibCsv.tell() == 0:
+		
 				fibCsv.seek(0)
 				print('csv is not empty')
 				for line in csvReader:
 					# Load hashmap
 					backup.update({int(line['key']): int(line['val'])})
 					# Load doubly linked-list
-					addLink(int(line['key']))
+					addLink(int(line['key']), int(line['val']))
 
 				print('Load cache')
 				print(llist.head.key)		
@@ -206,11 +190,8 @@ def removeCache(deleteKeyValue):
 			# fibCsv.seek(0)
 			# For ever line in csv if the key is NOT matching, write the line
 			for line in csvReader:
-				print('for line in csvReader')
 				if not line['key'] == str(deleteKeyValue):
 					tempWriter.writerow(line) 
-				else:
-				 	print("it's the key") # write all non-matching lines
 			# shutil.move('content of source','to destination')
 			shutil.move('temp.csv','fib.csv')
 	except Exception as e:
@@ -227,30 +208,35 @@ def clearCache():
 				# shutil.move('content of source','to destination')
 				shutil.move('new.csv','fib.csv')
 
-				# Empty hash-map
-				backup.clear()
+				# Check if backup has been loaded yett
+				if backup:
+					# Empty hash-map
+					backup.clear()
 
-				# Delete nodes in linked list
-				# trav = llist.head.next
-				# # While trav is not None
-				# while not trav:
-					
-				# 	# Delete previous node
-				# 	if trav.prev:
-				# 		del trav.prev
-				# 	# If last node, delete
-				# 	else:
-				# 		del trav
-					
-				# 	# Traverse to next node
-				# 	try:
-				# 		trav = trav.next
-				# 	except Exception as e:
-				# 		pass
+				# Check if llist has been loaded yet
+				if llist.head:
+					# Delete nodes in linked list
+					trav = llist.head.next
+					# While trav is not None
+					while not trav:
+						
+						# Delete previous node
+						if trav.prev:
+							del trav.prev
+						# If last node, delete
+						else:
+							del trav
+						
+						# Traverse to next node
+						try:
+							trav = trav.next
+						except Exception as e:
+							pass
 
-				# Reset head tail values
-				llist.head = None
-				llist.tail = None
+					# Reset head tail values
+					llist.head = None
+					llist.tail = None
+				
 				result = "Cache is cleared"
 				return result
 			
@@ -272,8 +258,7 @@ def returnCache(state, key):
 		val = fib(key)
 		return val
 
-	
-# cacheManager function returns cache value to user from hashmap backup, IF it exists.
+	# cacheManager function returns cache value to user from hashmap backup, IF it exists.
 # If it doesn't exist, it calculates value, returns, and saves it to program data structures,
 # and the cache (csv file)
 def cacheManager(key):
@@ -322,7 +307,7 @@ def cacheManager(key):
 	# Finally, if key value does not exist in program memory already, add the new key value pair
 	# to the linked-list (addLink()), and hash-table (backup), and then to the cache (updateCache())
 	if not linkSwap(key):
-		addLink(key)
+		addLink(key, val)
 		backup.update({key: val})
 		updateCache(key, val) 
 	print('new llist.head.key is ' + str(llist.head.key))
@@ -333,9 +318,11 @@ def cacheManager(key):
 
 # Switch representing first time entry is submitted by user after program is opened
 first = True
-
+# Greeting only when program first runs
+greeting = True
 # Switch for open/close value of program
 program = True
+
 while program:
 
 	# If program just opened, initiate data structures
@@ -345,13 +332,16 @@ while program:
 		global backup 
 		backup = {}
 		# Greet users with menu options that can inputed
+	if greeting == True:
 		print(f'(For menu options, enter "m") \n\nHi User,')
 
 	# Prompt user for a number
 	print(f'what Fibonacci value would you like? \nEnter position number: ')
+	
 	# Receive input
 	entry = input()
-
+	greeting = False
+	
 	# If user chooses to close program, set vswitch to False
 	if entry == 'n' or entry == 'N':
 		program = False
@@ -361,8 +351,11 @@ while program:
 	elif program:
 		
 		if entry == "m" or entry == "M":
-			print(f'Menu: \n Enter "n" to close program. \n Enter "s" to see status of cache values. \n' +
-			' Enter "c" to clear all cache \n' )
+			print(f'Menu: \nEnter "c" to clear all cache. \nEnter "e" to exit program.\n' )
+
+		elif entry == "e" or entry == "E":
+			print('Program exited')
+			sys.exit()
 		
 		elif entry == "c" or entry == "C":
 			print("Are you sure you want to delete your cache? ('y' or 'n')")
