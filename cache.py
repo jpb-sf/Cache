@@ -5,7 +5,7 @@ import shutil
 
 
 # Mock Cache LRU program is using a doubly linked-list to cache for fast insertion/deletion
-# Then it uses a dictionary to 'hash map'values for fast lookup.
+# Then it uses a dictionary to 'hash map' values for fast lookup.
 # Lookup will also require sorting afterwards, and sort and lookup are slow in a linked-list. 
 # Best of both worlds using doubly-linked list, and backing it up with hash map
 
@@ -68,7 +68,7 @@ def addLink(key, val):
 		# Reset llist.head to point to the new node
 		llist.head = new
 
-# Function swaps link nodes in linked-list IF key value already exists
+# If key value already exists, function 'moves' node to , and pointers(next, prev) in Linked List accordingly
 def linkSwap(key):
 
 	current = llist.head
@@ -103,7 +103,7 @@ def linkSwap(key):
 			# Node value exists, swap in order of the linked-list nodes was made
 			return True
 
-		# updates value to be able to loop thru
+		# updates value for the while loop
 		current = current.next
 	# Node value does not already exist
 	return False
